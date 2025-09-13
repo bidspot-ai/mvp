@@ -1,128 +1,232 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>ArmorX Retail Shop</title>
-  <!-- Social Sharing Open Graph & Twitter meta tags -->
-  <meta property="og:title" content="ArmorX Retail Shop | Mosquito Net Calculator">
-  <meta property="og:description" content="Instantly calculate window mosquito net sizes & prices. Order fast. Pay with UPI.">
-  <meta property="og:image" content="https://i.postimg.cc/9F79Z5wv/Calculator-Home-Page.jpg">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://armorx-net.github.io/shop/">
-
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ArmorX Retail Shop | Mosquito Net Calculator">
-  <meta name="twitter:description" content="Instantly calculate window mosquito net sizes & prices. Order fast. Pay with UPI.">
-  <meta name="twitter:image" content="https://i.postimg.cc/9F79Z5wv/Calculator-Home-Page.jpg">
-
-  <link rel="stylesheet" href="style.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BidSpot — MVP Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Google Fonts (only for demo, optional in corp builds) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <img src="https://i.postimg.cc/Ls8tJXFk/ARMORX-Logo.png" alt="ArmorX Logo" class="brand-logo" />
-    <div id="app-title"><h2>ArmorX Retail Shop</h2></div>
-    <div id="login-section">
-      <input type="tel" id="retailer-phone" maxlength="10" placeholder="Enter 10-digit Retailer Mobile"/>
-      <button onclick="login()">Login</button>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <svg viewBox="0 0 48 48" class="logo" aria-hidden><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#6C5CE7"/><stop offset="1" stop-color="#00B4D8"/></linearGradient></defs>
+          <rect width="48" height="48" rx="8" fill="url(#g)"/>
+          <path d="M14 31 L24 17 L34 31 Z" fill="rgba(255,255,255,0.95)"/>
+        </svg>
+        <div>
+          <div class="title">BidSpot</div>
+          <div class="subtitle">GPU Marketplace (MVP)</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-btn active" data-tab="market">Market</button>
+        <button class="nav-btn" data-tab="jobs">Jobs</button>
+        <button class="nav-btn" data-tab="teams">Teams</button>
+        <button class="nav-btn" data-tab="reports">Reports</button>
+      </nav>
+
+      <div class="footer-note">
+        <small>Auction cadence: <strong>5 min</strong></small>
+        <small class="muted">Demo: simulated live market</small>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input id="search" placeholder="Search teams, jobs..." />
+        </div>
+        <div class="top-actions">
+          <button id="newJobBtn" class="primary">New Job</button>
+          <div class="user-pill">Demo · CFO</div>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- Market view -->
+        <div id="market" class="panel active-panel">
+          <div class="row">
+            <div class="card market-card">
+              <div class="card-head">
+                <div>
+                  <h3>Live Auction</h3>
+                  <p class="muted">Next clearing in <span id="countdown">05:00</span></p>
+                </div>
+                <div class="price-box">
+                  <div class="price-label">Clearing Price</div>
+                  <div id="clearingPrice" class="price-value">$0.00</div>
+                </div>
+              </div>
+
+              <div class="auction-graph" id="auctionGraph">
+                <!-- small sparkline canvas -->
+                <canvas id="sparkline" width="700" height="120"></canvas>
+                <div class="ticker">
+                  <div><strong id="spotPrice">$0.00</strong> spot</div>
+                  <div class="muted">Utilization: <strong id="util">0%</strong></div>
+                </div>
+              </div>
+
+              <div class="auction-controls">
+                <div class="legend">
+                  <span class="chip">Uniform-price auction</span>
+                  <span class="chip muted">Min unit: 1 min</span>
+                </div>
+                <div class="action-row">
+                  <button id="runNow" class="secondary">Run Auction Now</button>
+                  <div class="muted small">Or wait for next cadence</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card side-card">
+              <h4>Top Bidders</h4>
+              <ul id="topBidders" class="list-compact"></ul>
+              <hr />
+              <h4>Resource Snapshot</h4>
+              <div class="metric">
+                <div class="metric-label">Total GPUs</div>
+                <div class="metric-value">128</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Allocated</div>
+                <div id="allocated" class="metric-value">0</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Free</div>
+                <div id="free" class="metric-value">128</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row small">
+            <div class="card">
+              <h4>Recent Auctions</h4>
+              <table class="table">
+                <thead><tr><th>Time</th><th>Clearing $</th><th>Allocated GPUs</th><th>Top Bidder</th></tr></thead>
+                <tbody id="auctionHistory"></tbody>
+              </table>
+            </div>
+
+            <div class="card">
+              <h4>Job Queue</h4>
+              <ul id="jobQueue" class="job-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jobs view -->
+        <div id="jobs" class="panel">
+          <div class="row">
+            <div class="card full">
+              <div class="card-head">
+                <h3>Jobs</h3>
+                <div class="muted">Submit jobs with bids, constraints, and deadlines</div>
+              </div>
+              <div>
+                <table class="table">
+                  <thead><tr><th>Job</th><th>Team</th><th>GPU</th><th>Bid</th><th>ETA</th><th>Status</th></tr></thead>
+                  <tbody id="jobsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teams view -->
+        <div id="teams" class="panel">
+          <div class="row">
+            <div class="card">
+              <h3>Teams & Credits</h3>
+              <div id="teamsGrid" class="teams-grid"></div>
+            </div>
+
+            <div class="card">
+              <h3>Finance Snapshot</h3>
+              <div class="metric">
+                <div class="metric-label">Total Credits</div>
+                <div id="totalCredits" class="metric-value">$0</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Burn rate /hr</div>
+                <div id="burnRate" class="metric-value">$0/hr</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reports view -->
+        <div id="reports" class="panel">
+          <div class="row">
+            <div class="card full">
+              <h3>Reports</h3>
+              <p class="muted">Efficiency / Utilization / Cost savings (demo)</p>
+              <div class="report-grid">
+                <div class="stat-card">
+                  <div class="stat-title">Efficiency</div>
+                  <div id="efficiency" class="stat-value">0%</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-title">Avg. Wait Time</div>
+                  <div id="avgWait" class="stat-value">0m</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-title">Estimated Monthly Savings</div>
+                  <div id="savings" class="stat-value">$0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- New Job Modal -->
+  <div id="modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel">
+      <header>
+        <h3>Submit Job</h3>
+        <button id="closeModal" class="close">&times;</button>
+      </header>
+      <form id="jobForm">
+        <label>Job name
+          <input name="name" required />
+        </label>
+
+        <label>Team
+          <select name="team"></select>
+        </label>
+
+        <label>GPUs required
+          <input name="gpus" type="number" min="1" max="64" value="1" required />
+        </label>
+
+        <label>Bid (credits / minute)
+          <input name="bid" type="number" min="0.01" step="0.01" value="0.50" required />
+        </label>
+
+        <label>Max run (minutes)
+          <input name="duration" type="number" min="1" value="60" required />
+        </label>
+
+        <label>Deadline (hours)
+          <input name="deadline" type="number" min="1" value="24" required />
+        </label>
+
+        <div class="modal-actions">
+          <button type="submit" class="primary">Submit job</button>
+          <button type="button" id="cancelModal" class="secondary">Cancel</button>
+        </div>
+      </form>
     </div>
-    <form id="order-section" style="display:none;" onsubmit="event.preventDefault();">
-      <div id="main-title">
-        <h2>ArmorX Retail Shop</h2>
-        <button type="button" id="logout-btn" onclick="logout()" style="float:right;margin-right:6px;font-size:0.98em;padding:7px 16px 7px 16px;background:#ffeaea;color:#b20000;border-radius:6px;border:none;box-shadow:0 1px 3px #b2000022;cursor:pointer;">Logout</button>
-      </div>
-      <h3>Add Window Nets</h3>
-      <div id="windows-list"></div>
-      <button type="button" class="add-btn" onclick="addWindowEntry()">+ Add Window</button>
-      <div class="invoice">
-        <strong>Total: ₹<span id="total-price">0</span></strong>
-        <button type="button" class="upi-btn" onclick="showUPIQR()">Pay via UPI</button>
-      </div>
-      <h4>Customer Details</h4>
-      <input id="cust-name" type="text" placeholder="Customer Name"/>
-      <input id="cust-phone" type="tel" maxlength="10" placeholder="Customer Phone"/>
-      <div>
-        <label>Delivery:</label>
-        <select id="delivery-mode" onchange="handleDeliveryChange()">
-          <option value="Store Pickup">Store Pickup</option>
-          <option value="Home Delivery">Home Delivery</option>
-        </select>
-      </div>
-      <input id="cust-address" type="text" style="display:none;" placeholder="Customer Address"/>
-      <button type="button" class="wa-btn" onclick="sendOnWhatsApp()">Send on WhatsApp</button>
-    </form>
-    <img src="https://i.postimg.cc/9F79Z5wv/Calculator-Home-Page.jpg" alt="ArmorX Banner" class="brand-banner"/>
   </div>
 
   <script src="app.js"></script>
-
-  <!-- UPI Modal -->
-  <div id="upiModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0007; z-index:99; justify-content:center; align-items:center;">
-    <div style="background:#fff; border-radius:16px; padding:28px; text-align:center; min-width:240px; max-width:98vw;">
-      <h3>Scan to Pay via UPI</h3>
-      <canvas id="qrCanvas" style="margin:0 auto 14px auto;"></canvas>
-      <div id="upiAmount" style="font-size:1.13em; color:#1a6b2b; font-weight:600; margin:8px 0 2px 0;"></div>
-      <div style="margin:10px 0;">
-        <b>UPI ID:</b> <span id="upiText"></span>
-      </div>
-      <button onclick="editUPI()" style="background:#eee;color:#333;font-size:1em;padding:6px 16px;margin-bottom:10px;">Edit UPI ID</button><br>
-      <button onclick="document.getElementById('upiModal').style.display='none'" style="background:#ff5757;color:#fff;">Close</button>
-    </div>
-  </div>
-
-  <!-- PIN Modal (hidden by default) -->
-<div id="pinModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0005; z-index:1000; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:10px; padding:32px 28px; text-align:center; min-width:250px; max-width:98vw;">
-    <h3>Enter Retailer PIN</h3>
-    <input id="retailerPinInput" type="password" maxlength="4" style="font-size:1.2em; letter-spacing:8px; text-align:center;" autocomplete="off"/>
-    <div id="pinError" style="display:none;color:#b20000;margin:10px 0 0;">Incorrect PIN. Try again!</div>
-    <div style="display: flex; gap: 14px; margin-top: 18px; justify-content:center;">
-  <button class="modal-btn submit-btn" onclick="verifyRetailerPIN()">Submit</button>
-  <button class="modal-btn cancel-btn" onclick="closePinModal()">Cancel</button>
-</div>
-  </div>
-</div>
-
-<!-- Payout Modal (hidden by default) -->
-<div id="payoutModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0005; z-index:1000; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:10px; padding:32px 28px; text-align:center; min-width:270px; max-width:99vw;">
-    <h3>Your Monthly Payout</h3>
-    <div id="payoutDetails" style="margin:14px 0 20px 0;">Calculating...</div>
-    <button onclick="closePayoutModal()" style="padding:7px 22px;">Close</button>
-  </div>
-</div>
-
- <!-- Retailer Dashboard Modal -->
-<div id="dashboardModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0007; z-index:1100; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:18px; padding:38px 30px 28px 30px; min-width:330px; max-width:98vw; box-shadow:0 6px 32px #008d1e13;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="margin-bottom:8px; color:#246422; font-size:1.35em;">Welcome, <span id="retailerDashName">Retailer</span></h2>
-      <button class="modal-btn" onclick="closeDashboardModal()" style="background:#ffeaea; color:#b20000; font-weight:600;">×</button>
-    </div>
-    <div style="display:flex; flex-wrap:wrap; gap:14px 12px; margin-bottom:18px;">
-      <div class="dash-metric"><div class="metric-title">Today’s Orders</div><div class="metric-value" id="dashTodayOrders">0</div><div class="metric-sub" id="dashGrowth">+0%</div></div>
-      <div class="dash-metric"><div class="metric-title">Month Sales</div><div class="metric-value" id="dashMonthSales">₹0</div></div>
-      <div class="dash-metric"><div class="metric-title">Pending Payout</div><div class="metric-value" id="dashPending">₹0</div></div>
-      <div class="dash-metric"><div class="metric-title">Last Payout</div><div class="metric-value" id="dashLastPayout">₹0</div></div>
-    </div>
-    <canvas id="ordersBarChart" style="width:100%;max-width:340px;height:120px;margin:0 auto 12px auto;"></canvas>
-    <h4 style="margin:16px 0 8px 0;font-size:1.09em;">Recent Orders</h4>
-    <div id="dashRecentOrders" style="font-size:0.97em; background:#f8f8f8; border-radius:7px; padding:7px 10px 6px 10px; margin-bottom:10px;"></div>
-    <h4 style="margin:11px 0 7px 0;font-size:1.09em;">Payout History</h4>
-    <table style="width:100%;font-size:0.98em; background:#fafaff; border-radius:8px;">
-      <thead><tr style="color:#246422;"><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
-      <tbody id="dashPayoutTable"></tbody>
-    </table>
-    <div style="text-align:center; margin:14px 0 0 0;">
-      <small style="color:#888;">Need help? <a href="mailto:support@armorx.com">Contact support</a></small>
-    </div>
-  </div>
-</div>
-
-  
 </body>
 </html>
