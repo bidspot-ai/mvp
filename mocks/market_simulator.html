@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BidSpot Market Clearing Algorithm Simulator</title>
+    <title>GPU Market Clearing Algorithm Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="market_simulator.css">
 </head>
@@ -96,6 +97,15 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- New Price Trend Plots Card -->
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4">Spot Price Trends (per GPU)</h3>
+                    <div id="price-charts-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Charts will be injected here by JavaScript -->
+                    </div>
+                </div>
+
             </div>
 
         </div>
@@ -103,4 +113,3 @@
     <script src="market_simulator.js"></script>
 </body>
 </html>
-

@@ -4,6 +4,8 @@ let pinnedDemandRequests = [];
 let floatingDemandRequests = [];
 let requestIdCounter = 0;
 let lastAllocationPlan = null; // To hold the results for linking
+let priceHistory = {};
+let chartInstances = {};
 
 const WORKLOAD_SHAPES = {
     'inference': { gpus: 1, name: 'AI Inference' },
@@ -15,7 +17,6 @@ let CLUSTER_CONFIG = {};
 
 async function loadClusterConfig() {
     const yamlString=`
-    # Example cluster configuration
     us-east-1:
       total_machines: 128
       guaranteed_machines: 30
@@ -66,6 +67,7 @@ const demandQueueDisplay = document.getElementById('demand-queue-display');
 const clusterStateDisplay = document.getElementById('cluster-state-display');
 const priceListDisplay = document.getElementById('price-list-display');
 const allocationPlanDisplay = document.getElementById('allocation-plan-display');
+const priceChartsGrid = document.getElementById('price-charts-grid');
 
 // --- 1. CORE ALGORITHM FUNCTIONS ---
 
@@ -85,8 +87,7 @@ function calculateSpotPricePerGPU(clusterId, allocatedGpus) {
     const availableSpotSupply = spotMachines * 8;
     if (availableSpotSupply <= 0) return Infinity;
 
-    let demand = allocatedGpus;
-    if (demand <= 0) demand = 1; // Prevent zero price
+    let demand = allocatedGpus > 0 ? allocatedGpus : 1; // Use allocated GPUs, but ensure demand is at least 1 to avoid zero prices
 
     const ratio = demand / availableSpotSupply;
     const adjustmentFactor = Math.pow(ratio, config.sensitivity_s);
@@ -204,21 +205,96 @@ function runMarketClearingPeriod() {
         price_list.spot_prices[clusterId] = calculateSpotPricePerGPU(clusterId, allocatedGpusPerCluster[clusterId]);
     }
     
-    // Update the persistent machine state for the next period
+    // Update charts with the new prices
+    updatePriceCharts(price_list.spot_prices);
+    
+    // Update the persistent machine state and save the allocation plan for linking
     machineState = currentMachineState;
-    lastAllocationPlan = allocation_plan; // Store the plan for linking
+    lastAllocationPlan = allocation_plan;
 
+    // Render all UI components
     renderPeriodCounter();
     renderClusterState();
     renderPriceList(price_list);
     renderAllocationPlan(allocation_plan);
 
+    // Clear the demand queue for the next period
     pinnedDemandRequests = [];
     floatingDemandRequests = [];
     renderDemandQueue();
 }
 
-// --- 2. UI RENDERING FUNCTIONS ---
+// --- 2. UI RENDERING & CHART FUNCTIONS ---
+
+function initializePriceCharts() {
+    priceChartsGrid.innerHTML = '';
+    chartInstances = {};
+    priceHistory = {};
+
+    const colors = {
+        "us-east-1": 'rgba(75, 192, 192, 1)',
+        "eu-west-2": 'rgba(255, 99, 132, 1)',
+        "ap-northeast-1": 'rgba(255, 206, 86, 1)'
+    };
+    const bgColors = {
+        "us-east-1": 'rgba(75, 192, 192, 0.2)',
+        "eu-west-2": 'rgba(255, 99, 132, 0.2)',
+        "ap-northeast-1": 'rgba(255, 206, 86, 0.2)'
+    };
+
+    for (const clusterId in CLUSTER_CONFIG) {
+        priceHistory[clusterId] = [];
+        const canvasContainer = document.createElement('div');
+        const canvasEl = document.createElement('canvas');
+        canvasContainer.innerHTML = `<h4 class="text-center font-medium text-gray-700">${clusterId}</h4>`;
+        canvasContainer.appendChild(canvasEl);
+        priceChartsGrid.appendChild(canvasContainer);
+
+        const ctx = canvasEl.getContext('2d');
+        chartInstances[clusterId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: `Spot Price`,
+                    data: [],
+                    borderColor: colors[clusterId] || 'rgba(54, 162, 235, 1)',
+                    backgroundColor: bgColors[clusterId] || 'rgba(54, 162, 235, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: value => '$' + value.toFixed(4) }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+}
+
+function updatePriceCharts(newPrices) {
+    for (const clusterId in newPrices) {
+        if (chartInstances[clusterId]) {
+            const chart = chartInstances[clusterId];
+            priceHistory[clusterId].push(newPrices[clusterId]);
+            chart.data.labels.push(`P${periodCounter}`);
+            chart.data.datasets[0].data.push(newPrices[clusterId]);
+            // Limit the chart to the last 10 data points for readability
+            if (chart.data.labels.length > 10) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update();
+        }
+    }
+}
+
 function renderPeriodCounter() { periodCounterEl.textContent = periodCounter; }
 
 function renderDemandQueue() {
@@ -228,13 +304,10 @@ function renderDemandQueue() {
         return;
     }
     const renderReq = (req, type) => {
-        const el = document.createElement('div');
         const shapeName = WORKLOAD_SHAPES[req.shape].name;
         const color = type === 'Pinned' ? 'indigo' : 'emerald';
-        el.className = `p-2 bg-${color}-50 rounded-md`;
         const target = type === 'Pinned' ? ` to <strong>${req.cluster}</strong>` : '';
-        el.innerHTML = `<strong>${type}:</strong> ${req.quantity}x ${shapeName}${target} (ID: ${req.id})`;
-        demandQueueDisplay.appendChild(el);
+        demandQueueDisplay.innerHTML += `<div class="p-2 bg-${color}-50 rounded-md"><strong>${type}:</strong> ${req.quantity}x ${shapeName}${target} (ID: ${req.id})</div>`;
     };
     pinnedDemandRequests.forEach(req => renderReq(req, 'Pinned'));
     floatingDemandRequests.forEach(req => renderReq(req, 'Floating'));
@@ -260,43 +333,33 @@ function renderClusterState() {
         el.className = 'p-4 bg-gray-100 rounded-lg space-y-2 border block hover:shadow-lg hover:border-indigo-500 transition-all cursor-pointer';
         el.target = '_blank';
 
+        // Prepare data for the scheduler link
         let demandForScheduler = [];
         if (lastAllocationPlan && lastAllocationPlan.satisfied_demand) {
-            // Collect pinned demand for this cluster
-            lastAllocationPlan.satisfied_demand.pinned
-                .filter(req => req.cluster === clusterId)
-                .forEach(req => {
-                    const existing = demandForScheduler.find(d => d.shape === req.shape);
-                    if (existing) {
-                        existing.quantity += req.satisfied_quantity;
-                    } else {
-                        demandForScheduler.push({ shape: req.shape, quantity: req.satisfied_quantity });
-                    }
-                });
+            // Aggregate pinned demand for this cluster
+            lastAllocationPlan.satisfied_demand.pinned.filter(req => req.cluster === clusterId).forEach(req => {
+                const existing = demandForScheduler.find(d => d.shape === req.shape);
+                if (existing) { existing.quantity += req.satisfied_quantity; } 
+                else { demandForScheduler.push({ shape: req.shape, quantity: req.satisfied_quantity }); }
+            });
 
-            // Collect floating demand allocated to this cluster
+            // Aggregate floating demand allocated to this cluster
             lastAllocationPlan.satisfied_demand.floating.forEach(req => {
                 const allocatedQuantity = req.allocations[clusterId];
                 if (allocatedQuantity > 0) {
                     const existing = demandForScheduler.find(d => d.shape === req.shape);
-                    if (existing) {
-                        existing.quantity += allocatedQuantity;
-                    } else {
-                        demandForScheduler.push({ shape: req.shape, quantity: allocatedQuantity });
-                    }
+                    if (existing) { existing.quantity += allocatedQuantity; } 
+                    else { demandForScheduler.push({ shape: req.shape, quantity: allocatedQuantity }); }
                 }
             });
         }
         
-        const schedulerConfig = { 
-            numMachines: config.total_machines - config.guaranteed_machines 
-        };
-
+        const schedulerConfig = { numMachines: config.total_machines - config.guaranteed_machines };
         const configParam = encodeURIComponent(JSON.stringify(schedulerConfig));
         const demandParam = encodeURIComponent(JSON.stringify(demandForScheduler));
 
         el.href = `cluster_scheduler.html?clusterId=${clusterId}&config=${configParam}&demand=${demandParam}`;
-        
+
         el.innerHTML = `
             <h4 class="font-bold text-lg">${clusterId}</h4>
             <div>Total Spot GPUs: <span class="font-medium">${totalGpus}</span></div>
@@ -314,52 +377,43 @@ function renderClusterState() {
 
 function renderPriceList(priceList) {
     priceListDisplay.innerHTML = '';
-    const guaranteedEl = document.createElement('div');
-    guaranteedEl.innerHTML = '<h4 class="font-semibold text-gray-700">Guaranteed Prices (per 8-GPU Machine)</h4>';
-    const spotEl = document.createElement('div');
-    spotEl.innerHTML = '<h4 class="font-semibold text-gray-700 mt-3">Spot Prices (per GPU)</h4>';
-
+    priceListDisplay.innerHTML += '<h4 class="font-semibold text-gray-700">Guaranteed Prices (per 8-GPU Machine)</h4>';
     for(const clusterId in priceList.guaranteed_prices){
-        guaranteedEl.innerHTML += `<div class="text-sm">${clusterId}: <span class="font-bold text-indigo-600">$${priceList.guaranteed_prices[clusterId].toFixed(2)}</span></div>`;
+        priceListDisplay.innerHTML += `<div class="text-sm">${clusterId}: <span class="font-bold text-indigo-600">$${priceList.guaranteed_prices[clusterId].toFixed(2)}</span></div>`;
     }
+    priceListDisplay.innerHTML += '<h4 class="font-semibold text-gray-700 mt-3">Spot Prices (per GPU)</h4>';
      for(const clusterId in priceList.spot_prices){
         const price = isFinite(priceList.spot_prices[clusterId]) ? `$${priceList.spot_prices[clusterId].toFixed(4)}` : 'Unavailable';
-        spotEl.innerHTML += `<div class="text-sm">${clusterId}: <span class="font-bold text-emerald-600">${price}</span></div>`;
+        priceListDisplay.innerHTML += `<div class="text-sm">${clusterId}: <span class="font-bold text-emerald-600">${price}</span></div>`;
     }
-    priceListDisplay.appendChild(guaranteedEl);
-    priceListDisplay.appendChild(spotEl);
 }
 
 function renderAllocationPlan(plan){
     allocationPlanDisplay.innerHTML = '';
-    const satisfiedEl = document.createElement('div');
-    satisfiedEl.innerHTML = '<h4 class="font-semibold text-green-700">Satisfied Demand</h4>';
+    allocationPlanDisplay.innerHTML += '<h4 class="font-semibold text-green-700">Satisfied Demand</h4>';
     if (plan.satisfied_demand.pinned.length === 0 && plan.satisfied_demand.floating.length === 0) {
-        satisfiedEl.innerHTML += `<p class="text-sm text-gray-500">None</p>`;
+        allocationPlanDisplay.innerHTML += `<p class="text-sm text-gray-500">None</p>`;
     } else {
         plan.satisfied_demand.pinned.forEach(req => {
-            satisfiedEl.innerHTML += `<div class="text-xs p-1 bg-green-50 rounded"><strong>Pinned #${req.id}:</strong> ${req.satisfied_quantity}/${req.quantity} jobs on <strong>${req.cluster}</strong></div>`;
+            allocationPlanDisplay.innerHTML += `<div class="text-xs p-1 bg-green-50 rounded"><strong>Pinned #${req.id}:</strong> ${req.satisfied_quantity}/${req.quantity} jobs on <strong>${req.cluster}</strong></div>`;
         });
         plan.satisfied_demand.floating.forEach(req => {
             const allocs = Object.entries(req.allocations).map(([c, q]) => `${q} on <strong>${c}</strong>`).join(', ');
-            satisfiedEl.innerHTML += `<div class="text-xs p-1 bg-green-50 rounded"><strong>Floating #${req.id}:</strong> ${req.satisfied_quantity}/${req.quantity} jobs placed (${allocs})</div>`;
+            allocationPlanDisplay.innerHTML += `<div class="text-xs p-1 bg-green-50 rounded"><strong>Floating #${req.id}:</strong> ${req.satisfied_quantity}/${req.quantity} jobs placed (${allocs})</div>`;
         });
     }
-    allocationPlanDisplay.appendChild(satisfiedEl);
 
-    const unsatisfiedEl = document.createElement('div');
-    unsatisfiedEl.innerHTML = '<h4 class="font-semibold text-red-700">Unsatisfied Demand</h4>';
+    allocationPlanDisplay.innerHTML += '<h4 class="font-semibold text-red-700 mt-4">Unsatisfied Demand</h4>';
     if (plan.unsatisfied_demand.pinned.length === 0 && plan.unsatisfied_demand.floating.length === 0) {
-        unsatisfiedEl.innerHTML += `<p class="text-sm text-gray-500">None</p>`;
+        allocationPlanDisplay.innerHTML += `<p class="text-sm text-gray-500">None</p>`;
     } else {
         plan.unsatisfied_demand.pinned.forEach(req => {
-            unsatisfiedEl.innerHTML += `<div class="text-xs p-1 bg-red-50 rounded"><strong>Pinned #${req.id}:</strong> ${req.unsatisfied_quantity} jobs for <strong>${req.cluster}</strong></div>`;
+            allocationPlanDisplay.innerHTML += `<div class="text-xs p-1 bg-red-50 rounded"><strong>Pinned #${req.id}:</strong> ${req.unsatisfied_quantity} jobs for <strong>${req.cluster}</strong></div>`;
         });
         plan.unsatisfied_demand.floating.forEach(req => {
-            unsatisfiedEl.innerHTML += `<div class="text-xs p-1 bg-red-50 rounded"><strong>Floating #${req.id}:</strong> ${req.unsatisfied_quantity} jobs</div>`;
+            allocationPlanDisplay.innerHTML += `<div class="text-xs p-1 bg-red-50 rounded"><strong>Floating #${req.id}:</strong> ${req.unsatisfied_quantity} jobs</div>`;
         });
     }
-    allocationPlanDisplay.appendChild(unsatisfiedEl);
 }
 
 // --- 3. EVENT LISTENERS ---
@@ -390,6 +444,7 @@ runAlgorithmBtn.addEventListener('click', runMarketClearingPeriod);
 window.addEventListener('DOMContentLoaded', async () => {
     await loadClusterConfig();
     initializeMachineState();
+    initializePriceCharts();
     renderPeriodCounter();
     renderDemandQueue();
     renderClusterState();
