@@ -5,52 +5,108 @@
   <title>BidSpot</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 2em;
-      background: #f9f9f9;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #f9f9f9 60%, #e3f0ff 100%);
+      min-height: 100vh;
+      color: #222;
     }
-    h1 {
-      color: #333;
+    .container {
+      max-width: 700px;
+      margin: 3em auto 0 auto;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 4px 32px rgba(30,60,120,0.10);
+      padding: 2.5em 2em 2em 2em;
+    }
+    .logo-hero {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 0.5em;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      margin: 1em 0;
-    }
-    a {
-      text-decoration: none;
-      color: #1976d2;
-      font-size: 1.2em;
-      transition: color 0.2s;
-    }
-    a:hover {
-      color: #0d47a1;
+      margin-bottom: 2em;
     }
     .logo {
-      height: 40px;
-      vertical-align: middle;
+      height: 90px;
+      width: 90px;
+      border-radius: 18px;
+      box-shadow: 0 2px 16px rgba(25,118,210,0.10);
+      background: #fff;
+      margin-bottom: 0.7em;
+      border: 2px solid #e3f0ff;
+      transition: transform 0.2s;
+    }
+    .logo:hover {
+      transform: scale(1.07) rotate(-3deg);
+      box-shadow: 0 6px 32px rgba(25,118,210,0.18);
+    }
+    h1 {
+      color: #1976d2;
+      font-size: 2.5em;
+      font-weight: 700;
+      margin: 0 0 0.2em 0;
+      letter-spacing: 0.01em;
+      text-align: center;
+    }
+    .summary {
+      font-size: 1.18em;
+      color: #444;
+      margin-bottom: 2em;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2em;
+      align-items: center;
+    }
+    .links a {
+      display: inline-block;
+      background: linear-gradient(90deg, #1976d2 60%, #42a5f5 100%);
+      color: #fff;
+      font-size: 1.18em;
+      font-weight: 500;
+      padding: 0.7em 2.2em;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(25,118,210,0.08);
+      text-decoration: none;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+    .links a:hover {
+      background: linear-gradient(90deg, #1565c0 60%, #1976d2 100%);
+      box-shadow: 0 4px 16px rgba(25,118,210,0.16);
+      transform: translateY(-2px) scale(1.04);
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.2em 0.5em;
+      }
+      .logo {
+        height: 60px;
+        width: 60px;
+      }
+      h1 {
+        font-size: 1.5em;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>
-    <a href="assets/BidSpot.Ai-min.png" target="_blank">
-      <img src="assets/BidSpot.Ai-min.png" alt="BidSpot Logo" class="logo">
-    </a>
-    BidSpot
-  </h1>
-  <ul>
-    <li>
-      <a href="mocks/market_simulator.html">Market Simulator</a>
-    </li>
-    <li>
-      <a href="pitch/market-mvp-pitch.html">Market MVP Pitch</a>
-    </li>
-  </ul>
+  <div class="container">
+    <div class="logo-hero">
+      <a href="assets/BidSpot.Ai-min.png" target="_blank">
+        <img src="assets/BidSpot.Ai-min.png" alt="BidSpot Logo" class="logo" />
+      </a>
+      <h1>BidSpot</h1>
+    </div>
+    <div class="summary">
+      <strong>BidSpot</strong> is an internal GPU marketplace MVP demo. It simulates real-time auctions, job queueing, and market clearing for compute resources.<br><br>
+      <em>This frontend-only MVP is designed to showcase the product idea to investors and stakeholders. It demonstrates auction cadence, clearing prices, and team job submission. Connect it to your backend APIs for a production-ready experience.</em>
+    </div>
+    <div class="links">
+      <a href="mocks/market_simulator.html">🚀 Market Simulator</a>
+      <a href="pitch/market-mvp-pitch.html">📊 Market MVP Pitch</a>
+    </div>
+  </div>
 </body>
 </html>
