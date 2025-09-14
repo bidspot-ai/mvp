@@ -42,9 +42,7 @@
                     <div class="space-y-3 mb-6">
                         <label for="pinned-cluster" class="font-medium">Pinned Demand</label>
                         <select id="pinned-workload-shape" class="w-full p-2 border rounded-md bg-gray-50">
-                            <option value="inference">AI Inference (1 GPU)</option>
-                            <option value="training_batch">Training Batch (4 GPUs)</option>
-                            <option value="large_training">Large Training (8 GPUs)</option>
+                            <!-- Options will be populated by JavaScript -->
                         </select>
                         <select id="pinned-cluster" class="w-full p-2 border rounded-md bg-gray-50">
                             <option value="us-east-1">to us-east-1</option>
@@ -58,10 +56,8 @@
                     <div class="space-y-3">
                          <label for="floating-quantity" class="font-medium">Floating Demand</label>
                          <select id="floating-workload-shape" class="w-full p-2 border rounded-md bg-gray-50">
-                            <option value="inference">AI Inference (1 GPU)</option>
-                            <option value="training_batch">Training Batch (4 GPUs)</option>
-                            <option value="large_training">Large Training (8 GPUs)</option>
-                        </select>
+                            <!-- Options will be populated by JavaScript -->
+                         </select>
                          <input type="number" id="floating-quantity" placeholder="Number of Jobs" class="w-full p-2 border rounded-md" min="1" value="10">
                          <button id="add-floating-btn" class="btn btn-secondary w-full">Add Floating Request</button>
                     </div>

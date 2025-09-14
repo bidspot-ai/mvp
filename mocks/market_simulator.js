@@ -7,16 +7,12 @@ let lastAllocationPlan = null; // To hold the results for linking
 let priceHistory = {};
 let chartInstances = {};
 
-const WORKLOAD_SHAPES = {
-    'inference': { gpus: 1, name: 'AI Inference' },
-    'training_batch': { gpus: 4, name: 'Training Batch' },
-    'large_training': { gpus: 8, name: 'Large Training' }
-};
-
+// Configurations will be loaded from YAML below
+let WORKLOAD_CONFIG = {};
 let CLUSTER_CONFIG = {};
 
-async function loadClusterConfig() {
-    const yamlString=`
+async function loadConfigs() {
+    const clusterYamlString=`
     us-east-1:
       total_machines: 128
       guaranteed_machines: 30
@@ -39,10 +35,29 @@ async function loadClusterConfig() {
       sensitivity_g: 1.8
       sensitivity_s: 1.1
     `;
-    CLUSTER_CONFIG = jsyaml.load(yamlString);
+    CLUSTER_CONFIG = jsyaml.load(clusterYamlString);
+
+    const workloadYamlString=`
+    inference:
+      gpus: 1
+      name: 'AI Inference'
+      minDurationPeriods: 1  # 30m
+      maxDurationPeriods: 6  # 3h
+    training_batch:
+      gpus: 4
+      name: 'Training Batch'
+      minDurationPeriods: 2  # 1h
+      maxDurationPeriods: 24 # 12h
+    large_training:
+      gpus: 8
+      name: 'Large Training'
+      minDurationPeriods: 12 # 6h
+      maxDurationPeriods: 240 # 5d
+    `;
+    WORKLOAD_CONFIG = jsyaml.load(workloadYamlString);
 }
 
-// This will hold the state of each machine's available GPUs
+// machineState now tracks individual jobs and their completion times
 let machineState = {};
 
 function initializeMachineState() {
@@ -51,8 +66,9 @@ function initializeMachineState() {
         const config = CLUSTER_CONFIG[clusterId];
         machineState[clusterId] = [];
         // Only spot-available machines are tracked for allocation
-        for (let i = 0; i < config.total_machines - config.guaranteed_machines; i++) {
-            machineState[clusterId].push(8); // Each machine starts with 8 GPUs
+        const spotMachines = config.total_machines - config.guaranteed_machines;
+        for (let i = 0; i < spotMachines; i++) {
+            machineState[clusterId].push({ jobs: [], availableGpus: 8 });
         }
     }
 }
@@ -100,13 +116,25 @@ function calculateSpotPricePerGPU(clusterId, allocatedGpus) {
     return finalPrice;
 }
 
-// Helper to find and allocate a job on a machine
+// Helper to find and allocate a job on a machine, now with duration
 function findAndAllocate(clusterId, shape, state) {
-    const gpusNeeded = WORKLOAD_SHAPES[shape].gpus;
+    const gpusNeeded = WORKLOAD_CONFIG[shape].gpus;
     const machines = state[clusterId];
     for (let i = 0; i < machines.length; i++) {
-        if (machines[i] >= gpusNeeded) {
-            machines[i] -= gpusNeeded;
+        if (machines[i].availableGpus >= gpusNeeded) {
+            // Found a spot, now calculate duration
+            const shapeConfig = WORKLOAD_CONFIG[shape];
+            const duration = Math.floor(shapeConfig.minDurationPeriods + Math.random() * (shapeConfig.maxDurationPeriods - shapeConfig.minDurationPeriods + 1));
+            
+            // Add the new job with its completion time
+            machines[i].jobs.push({
+                gpus: gpusNeeded,
+                completionPeriod: periodCounter + duration
+            });
+            
+            // Update available GPUs on this machine
+            machines[i].availableGpus -= gpusNeeded;
+            
             return true; // Success
         }
     }
@@ -115,24 +143,39 @@ function findAndAllocate(clusterId, shape, state) {
 
 // Helper to just check if a shape can fit
  function canFit(clusterId, shape, state) {
-    const gpusNeeded = WORKLOAD_SHAPES[shape].gpus;
-    return state[clusterId].some(gpus => gpus >= gpusNeeded);
+    const gpusNeeded = WORKLOAD_CONFIG[shape].gpus;
+    return state[clusterId].some(machine => machine.availableGpus >= gpusNeeded);
 }
 
 
 function runMarketClearingPeriod() {
     periodCounter++;
 
+    // --- NEW: Step 1: Release completed jobs from machines ---
+    for (const clusterId in machineState) {
+        machineState[clusterId].forEach(machine => {
+            // Filter out completed jobs (jobs whose completion period is in the past)
+            machine.jobs = machine.jobs.filter(job => job.completionPeriod > periodCounter);
+            // Recalculate available GPUs based on remaining jobs
+            const gpusInUse = machine.jobs.reduce((acc, job) => acc + job.gpus, 0);
+            machine.availableGpus = 8 - gpusInUse;
+        });
+    }
+
+    // --- Step 2: Run the market clearing for the new demand ---
     const price_list = { guaranteed_prices: {}, spot_prices: {} };
     const allocation_plan = {
         satisfied_demand: { pinned: [], floating: [] },
         unsatisfied_demand: { pinned: [], floating: [] }
     };
 
-    // Deep copy machine state for this period's simulation
+    // Deep copy machine state for this period's simulation, as it's already updated with released jobs
     const currentMachineState = JSON.parse(JSON.stringify(machineState));
     const allocatedGpusPerCluster = {};
-    Object.keys(CLUSTER_CONFIG).forEach(id => allocatedGpusPerCluster[id] = 0);
+    Object.keys(CLUSTER_CONFIG).forEach(id => {
+        const gpusInUse = machineState[id].reduce((sum, machine) => sum + (8 - machine.availableGpus), 0);
+        allocatedGpusPerCluster[id] = gpusInUse;
+    });
 
     for (const clusterId in CLUSTER_CONFIG) {
         price_list.guaranteed_prices[clusterId] = calculateGuaranteedPrice(clusterId);
@@ -144,7 +187,7 @@ function runMarketClearingPeriod() {
         for (let i = 0; i < req.quantity; i++) {
             if (findAndAllocate(req.cluster, req.shape, currentMachineState)) {
                 satisfiedCount++;
-                allocatedGpusPerCluster[req.cluster] += WORKLOAD_SHAPES[req.shape].gpus;
+                allocatedGpusPerCluster[req.cluster] += WORKLOAD_CONFIG[req.shape].gpus;
             }
         }
         if (satisfiedCount > 0) {
@@ -168,7 +211,7 @@ function runMarketClearingPeriod() {
 
         for (const clusterId in CLUSTER_CONFIG) {
             if (canFit(clusterId, job.shape, currentMachineState)) {
-                const gpusForShape = WORKLOAD_SHAPES[job.shape].gpus;
+                const gpusForShape = WORKLOAD_CONFIG[job.shape].gpus;
                 // Predict price if we add this job
                 const potentialPrice = calculateSpotPricePerGPU(clusterId, allocatedGpusPerCluster[clusterId] + gpusForShape) * gpusForShape;
                 if (potentialPrice < cheapestOption.price) {
@@ -180,9 +223,8 @@ function runMarketClearingPeriod() {
         if (cheapestOption.cluster) {
             const clusterId = cheapestOption.cluster;
             findAndAllocate(clusterId, job.shape, currentMachineState);
-            allocatedGpusPerCluster[clusterId] += WORKLOAD_SHAPES[job.shape].gpus;
+            allocatedGpusPerCluster[clusterId] += WORKLOAD_CONFIG[job.shape].gpus;
 
-            // Aggregate satisfied floating jobs
             let existing = allocation_plan.satisfied_demand.floating.find(r => r.id === job.original_id);
             if (!existing) {
                 existing = { ...job, id: job.original_id, satisfied_quantity: 0, allocations: {} };
@@ -225,6 +267,28 @@ function runMarketClearingPeriod() {
 }
 
 // --- 2. UI RENDERING & CHART FUNCTIONS ---
+
+function populateWorkloadDropdowns() {
+    const pinnedSelect = document.getElementById('pinned-workload-shape');
+    const floatingSelect = document.getElementById('floating-workload-shape');
+    pinnedSelect.innerHTML = '';
+    floatingSelect.innerHTML = '';
+
+    for (const shapeId in WORKLOAD_CONFIG) {
+        const shape = WORKLOAD_CONFIG[shapeId];
+        const optionText = `${shape.name} (${shape.gpus} GPU${shape.gpus > 1 ? 's' : ''})`;
+        
+        const pinnedOption = document.createElement('option');
+        pinnedOption.value = shapeId;
+        pinnedOption.textContent = optionText;
+        pinnedSelect.appendChild(pinnedOption);
+
+        const floatingOption = document.createElement('option');
+        floatingOption.value = shapeId;
+        floatingOption.textContent = optionText;
+        floatingSelect.appendChild(floatingOption);
+    }
+}
 
 function initializePriceCharts() {
     priceChartsGrid.innerHTML = '';
@@ -304,7 +368,7 @@ function renderDemandQueue() {
         return;
     }
     const renderReq = (req, type) => {
-        const shapeName = WORKLOAD_SHAPES[req.shape].name;
+        const shapeName = WORKLOAD_CONFIG[req.shape].name;
         const color = type === 'Pinned' ? 'indigo' : 'emerald';
         const target = type === 'Pinned' ? ` to <strong>${req.cluster}</strong>` : '';
         demandQueueDisplay.innerHTML += `<div class="p-2 bg-${color}-50 rounded-md"><strong>${type}:</strong> ${req.quantity}x ${shapeName}${target} (ID: ${req.id})</div>`;
@@ -321,12 +385,12 @@ function renderClusterState() {
         if (!machines) continue;
 
         const totalGpus = (config.total_machines - config.guaranteed_machines) * 8;
-        const availableGpus = machines.reduce((a, b) => a + b, 0);
+        const availableGpus = machines.reduce((acc, machine) => acc + machine.availableGpus, 0);
 
         const availableSlots = {
-            large_training: machines.filter(g => g >= 8).length,
-            training_batch: machines.filter(g => g >= 4).length,
-            inference: machines.reduce((sum, gpus) => sum + Math.floor(gpus / 1), 0)
+            large_training: machines.filter(m => m.availableGpus >= 8).length,
+            training_batch: machines.filter(m => m.availableGpus >= 4).length,
+            inference: machines.reduce((sum, m) => sum + Math.floor(m.availableGpus / 1), 0)
         };
         
         const el = document.createElement('a');
@@ -442,11 +506,11 @@ runAlgorithmBtn.addEventListener('click', runMarketClearingPeriod);
 
 // --- 4. INITIAL RENDER ---
 window.addEventListener('DOMContentLoaded', async () => {
-    await loadClusterConfig();
+    await loadConfigs();
+    populateWorkloadDropdowns();
     initializeMachineState();
     initializePriceCharts();
     renderPeriodCounter();
     renderDemandQueue();
     renderClusterState();
 });
-
