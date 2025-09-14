@@ -248,7 +248,7 @@ function runMarketClearingPeriod() {
     }
     
     // Update charts with the new prices
-    updatePriceCharts(price_list.spot_prices);
+    updatePriceCharts(price_list.spot_prices, price_list.guaranteed_prices);
     
     // Update the persistent machine state and save the allocation plan for linking
     machineState = currentMachineState;
@@ -307,15 +307,28 @@ function initializePriceCharts() {
     };
 
     for (const clusterId in CLUSTER_CONFIG) {
-        priceHistory[clusterId] = [];
+        priceHistory[clusterId] = { spot: [], guaranteed: [] };
         const canvasContainer = document.createElement('div');
-        const canvasEl = document.createElement('canvas');
+        canvasContainer.style.marginBottom = '24px';
+
+        // Title
         canvasContainer.innerHTML = `<h4 class="text-center font-medium text-gray-700">${clusterId}</h4>`;
-        canvasContainer.appendChild(canvasEl);
+
+        // Spot price chart
+        const spotCanvas = document.createElement('canvas');
+        spotCanvas.style.marginBottom = '8px';
+        canvasContainer.appendChild(spotCanvas);
+
+        // Guaranteed price chart
+        const guaranteedCanvas = document.createElement('canvas');
+        canvasContainer.appendChild(guaranteedCanvas);
+
         priceChartsGrid.appendChild(canvasContainer);
 
-        const ctx = canvasEl.getContext('2d');
-        chartInstances[clusterId] = new Chart(ctx, {
+        // Spot price chart
+        const spotCtx = spotCanvas.getContext('2d');
+        chartInstances[clusterId] = chartInstances[clusterId] || {};
+        chartInstances[clusterId].spot = new Chart(spotCtx, {
             type: 'line',
             data: {
                 labels: [],
@@ -330,31 +343,70 @@ function initializePriceCharts() {
                 }]
             },
             options: {
+                plugins: { legend: { display: false } },
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: { callback: value => '$' + value.toFixed(4) }
                     }
-                },
-                plugins: { legend: { display: false } }
+                }
+            }
+        });
+
+        // Guaranteed price chart
+        const guaranteedCtx = guaranteedCanvas.getContext('2d');
+        chartInstances[clusterId].guaranteed = new Chart(guaranteedCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: `Guaranteed Price`,
+                    data: [],
+                    borderColor: 'rgba(99, 102, 241, 1)', // Indigo
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: value => '$' + value.toFixed(2) }
+                    }
+                }
             }
         });
     }
 }
 
-function updatePriceCharts(newPrices) {
-    for (const clusterId in newPrices) {
-        if (chartInstances[clusterId]) {
-            const chart = chartInstances[clusterId];
-            priceHistory[clusterId].push(newPrices[clusterId]);
-            chart.data.labels.push(`P${periodCounter}`);
-            chart.data.datasets[0].data.push(newPrices[clusterId]);
-            // Limit the chart to the last 10 data points for readability
-            if (chart.data.labels.length > 10) {
-                chart.data.labels.shift();
-                chart.data.datasets[0].data.shift();
+function updatePriceCharts(newSpotPrices, newGuaranteedPrices) {
+    for (const clusterId in chartInstances) {
+        // Update spot price history and chart
+        if (chartInstances[clusterId].spot) {
+            priceHistory[clusterId].spot.push(newSpotPrices[clusterId]);
+            const spotChart = chartInstances[clusterId].spot;
+            spotChart.data.labels.push(`P${periodCounter}`);
+            spotChart.data.datasets[0].data.push(newSpotPrices[clusterId]);
+            if (spotChart.data.labels.length > 10) {
+                spotChart.data.labels.shift();
+                spotChart.data.datasets[0].data.shift();
             }
-            chart.update();
+            spotChart.update();
+        }
+        // Update guaranteed price history and chart
+        if (chartInstances[clusterId].guaranteed) {
+            priceHistory[clusterId].guaranteed.push(newGuaranteedPrices[clusterId]);
+            const guaranteedChart = chartInstances[clusterId].guaranteed;
+            guaranteedChart.data.labels.push(`P${periodCounter}`);
+            guaranteedChart.data.datasets[0].data.push(newGuaranteedPrices[clusterId]);
+            if (guaranteedChart.data.labels.length > 10) {
+                guaranteedChart.data.labels.shift();
+                guaranteedChart.data.datasets[0].data.shift();
+            }
+            guaranteedChart.update();
         }
     }
 }
