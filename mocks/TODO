@@ -1,0 +1,4 @@
+* Allow for demand to also specify the amount of time the workload will run for.
+* Allow for multiple teams to compete in the market with their demand.
+* Each team should have some budget pre-allocated.
+* Team that doesn't consume their budget fully should accrue some interest.

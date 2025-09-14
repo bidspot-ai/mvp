@@ -1,0 +1,91 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: marketauctionjobs.bidspot.ai
+spec:
+  group: bidspot.ai
+  names:
+    plural: marketauctionjobs
+    singular: marketauctionjob
+    kind: MarketAuctionJob
+    shortNames:
+      - maj
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              description: The desired state of the MarketAuctionJob.
+              properties:
+                jobRequest:
+                  type: object
+                  description: Defines the details of the job to be run.
+                  properties:
+                    name:
+                      type: string
+                      description: The name of the job.
+                    resourceRequirements:
+                      type: object
+                      description: Specifies the GPU and other resource needs.
+                      properties:
+                        gpus:
+                          type: integer
+                          description: The number of GPUs required.
+                        memoryGiB:
+                          type: integer
+                          description: The memory required in GiB.
+                bids:
+                  type: object
+                  description: A map of bids from various clusters, where the key is the cluster ID.
+                  additionalProperties:
+                    type: object
+                    properties:
+                      price:
+                        type: number
+                        format: double
+                        description: The price per unit of resource (e.g., per GPU-hour).
+                      maxTimeUntilStart:
+                        type: string
+                        description: The maximum acceptable delay before starting the job (e.g., "10m" for 10 minutes).
+                constraints:
+                  type: object
+                  description: Imposes limitations on the job, like max runtime or preemption.
+                  properties:
+                    maximumRuntime:
+                      type: string
+                      description: The maximum runtime for the job (e.g., "1h" for 1 hour).
+                    isPreemptible:
+                      type: boolean
+                      description: Indicates if the job can be interrupted.
+            status:
+              type: object
+              description: The observed state of the MarketAuctionJob.
+              properties:
+                scheduledCluster:
+                  type: string
+                  description: The cluster where the job will run.
+                allocatedGPUs:
+                  type: integer
+                  description: The number of GPUs allocated to the job.
+                clearingPrice:
+                  type: number
+                  format: double
+                  description: The final price paid for the resources.
+                startTime:
+                  type: string
+                  format: date-time
+                  description: When the job is scheduled to begin.
+                state:
+                  type: string
+                  description: The current status of the auction (e.g., "Pending", "Scheduled", "Failed").
+                message:
+                  type: string
+                  description: A human-readable status message.
+      subresources:
+        status: {}

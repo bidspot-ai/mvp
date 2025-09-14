@@ -1,0 +1,30 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+.card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    padding: 1.5rem;
+    transition: all 0.2s ease-in-out;
+}
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    color: white;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+.btn-primary {
+    background-color: #4f46e5;
+}
+.btn-primary:hover {
+    background-color: #4338ca;
+}
+.btn-secondary {
+    background-color: #10b981;
+}
+.btn-secondary:hover {
+    background-color: #059669;
+}
