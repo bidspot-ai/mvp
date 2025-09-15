@@ -334,7 +334,7 @@ function initializePriceCharts() {
             data: {
                 labels: [],
                 datasets: [{
-                    label: `Spot Price`,
+                    label: `Spot Price (BSC)`,
                     data: [],
                     borderColor: colors[clusterId] || 'rgba(54, 162, 235, 1)',
                     backgroundColor: bgColors[clusterId] || 'rgba(54, 162, 235, 0.2)',
@@ -348,7 +348,7 @@ function initializePriceCharts() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { callback: value => '$' + value.toFixed(4) }
+                        ticks: { callback: value => value.toFixed(4) + ' BSC' }
                     }
                 }
             }
@@ -361,7 +361,7 @@ function initializePriceCharts() {
             data: {
                 labels: [],
                 datasets: [{
-                    label: `Guaranteed Price`,
+                    label: `Guaranteed Price (BSC)`,
                     data: [],
                     borderColor: 'rgba(99, 102, 241, 1)', // Indigo
                     backgroundColor: 'rgba(99, 102, 241, 0.15)',
@@ -375,7 +375,7 @@ function initializePriceCharts() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { callback: value => '$' + value.toFixed(2) }
+                        ticks: { callback: value => value.toFixed(2) + ' BSC' }
                     }
                 }
             }
@@ -494,13 +494,13 @@ function renderClusterState() {
 
 function renderPriceList(priceList) {
     priceListDisplay.innerHTML = '';
-    priceListDisplay.innerHTML += '<h4 class="font-semibold text-gray-700">Guaranteed Prices (per 8-GPU Machine)</h4>';
+    priceListDisplay.innerHTML += '<h4 class="font-semibold text-gray-700">Guaranteed Prices (per 8-GPU Machine, BSC)</h4>';
     for(const clusterId in priceList.guaranteed_prices){
-        priceListDisplay.innerHTML += `<div class="text-sm">${clusterId}: <span class="font-bold text-indigo-600">$${priceList.guaranteed_prices[clusterId].toFixed(2)}</span></div>`;
+        priceListDisplay.innerHTML += `<div class="text-sm">${clusterId}: <span class="font-bold text-indigo-600">${priceList.guaranteed_prices[clusterId].toFixed(2)} BSC</span></div>`;
     }
-    priceListDisplay.innerHTML += '<h4 class="font-semibold text-gray-700 mt-3">Spot Prices (per GPU)</h4>';
+    priceListDisplay.innerHTML += '<h4 class="font-semibold text-gray-700 mt-3">Spot Prices (per GPU, BSC)</h4>';
      for(const clusterId in priceList.spot_prices){
-        const price = isFinite(priceList.spot_prices[clusterId]) ? `$${priceList.spot_prices[clusterId].toFixed(4)}` : 'Unavailable';
+        const price = isFinite(priceList.spot_prices[clusterId]) ? `${priceList.spot_prices[clusterId].toFixed(4)} BSC` : 'Unavailable';
         priceListDisplay.innerHTML += `<div class="text-sm">${clusterId}: <span class="font-bold text-emerald-600">${price}</span></div>`;
     }
 }

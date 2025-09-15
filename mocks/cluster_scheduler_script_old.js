@@ -36,6 +36,7 @@ let gpuUtilization = Array(totalGpus).fill(0);
 let activeJobCount = 0;
 
 // Job types based on the user's request
+// If you ever display price/cost, use BidSpotCredits (BSC)
 const jobTypes = {
     'AI Inference': { count: 10, gpusPerJob: 1, color: '#f87171' },
     'Training Batch': { count: 6, gpusPerJob: 4, color: '#34d399' },

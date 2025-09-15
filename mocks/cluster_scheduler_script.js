@@ -208,6 +208,7 @@ function updateUIData() {
     const summaryHTML = Object.keys(jobTypes).map(jobName => {
         const job = jobTypes[jobName];
         if (job.count === 0) return '';
+        // If you ever display price/cost, use BSC here
         return `
             <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-100">
                 <div class="w-4 h-4 rounded-md" style="background-color: ${job.color};"></div>
