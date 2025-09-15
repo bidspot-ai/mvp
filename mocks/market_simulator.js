@@ -259,9 +259,102 @@ function runMarketClearingPeriod() {
     lastAllocationPlan = allocation_plan;
 
     renderAll(price_list, allocation_plan);
+    recordClusterOutputsYaml(price_list, allocation_plan);
     pinnedDemandRequests = [];
     floatingDemandRequests = [];
     renderDemandQueue();
+    // --- YAML OUTPUT FOR CLUSTERS (Download Only) ---
+    function recordClusterOutputsYaml(priceList, allocationPlan) {
+        const output = {};
+        for (const clusterId in CLUSTER_CONFIG) {
+            output[clusterId] = {
+                guaranteed_price: priceList.guaranteed_prices[clusterId],
+                spot_price: priceList.spot_prices[clusterId],
+                satisfied_pinned: allocationPlan.satisfied_demand.pinned.filter(r => r.cluster === clusterId),
+                satisfied_floating: allocationPlan.satisfied_demand.floating.filter(r => r.cluster === clusterId),
+                unsatisfied_pinned: allocationPlan.unsatisfied_demand.pinned.filter(r => r.cluster === clusterId),
+                unsatisfied_floating: allocationPlan.unsatisfied_demand.floating.filter(r => r.cluster === clusterId)
+            };
+        }
+        const yamlStr = jsyaml.dump(output, { noRefs: true, lineWidth: 120 });
+        offerYamlDownload(yamlStr);
+    }
+
+    function offerYamlDownload(yamlStr) {
+        let dlBtn = document.getElementById('yaml-download-btn');
+        if (!dlBtn) {
+            dlBtn = document.createElement('button');
+            dlBtn.id = 'yaml-download-btn';
+            dlBtn.className = 'btn btn-primary';
+            dlBtn.textContent = 'Download YAML Output';
+            dlBtn.style.marginTop = '2em';
+            document.body.appendChild(dlBtn);
+            dlBtn.addEventListener('click', () => {
+                const blob = new Blob([yamlStr], { type: 'text/yaml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cluster_output_period_${periodCounter}.yaml`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+            });
+
+            // Add button to open cluster_scheduler.html with YAML as URL param (base64 encoded)
+            let openSchedulerBtn = document.getElementById('open-scheduler-btn');
+            if (!openSchedulerBtn) {
+                openSchedulerBtn = document.createElement('button');
+                openSchedulerBtn.id = 'open-scheduler-btn';
+                openSchedulerBtn.className = 'btn btn-secondary';
+                openSchedulerBtn.textContent = 'Open in Cluster Scheduler';
+                openSchedulerBtn.style.marginLeft = '1em';
+                dlBtn.parentNode.insertBefore(openSchedulerBtn, dlBtn.nextSibling);
+                openSchedulerBtn.addEventListener('click', () => {
+                    // base64 encode and URI encode the YAML
+                    const b64 = btoa(unescape(encodeURIComponent(yamlStr)));
+                    const url = `cluster_scheduler.html?yaml=${encodeURIComponent(b64)}`;
+                    window.open(url, '_blank');
+                });
+            }
+        }
+    }
+}
+function displayYamlOutput(yamlStr) {
+    let yamlOutputEl = document.getElementById('yaml-output');
+    if (!yamlOutputEl) {
+        yamlOutputEl = document.createElement('pre');
+        yamlOutputEl.id = 'yaml-output';
+        yamlOutputEl.style.background = '#f3f4f6';
+        yamlOutputEl.style.border = '1px solid #e5e7eb';
+        yamlOutputEl.style.padding = '1em';
+        yamlOutputEl.style.marginTop = '2em';
+        yamlOutputEl.style.overflowX = 'auto';
+        yamlOutputEl.style.maxHeight = '300px';
+        yamlOutputEl.style.fontSize = '0.95em';
+        yamlOutputEl.style.whiteSpace = 'pre-wrap';
+        document.body.appendChild(yamlOutputEl);
+    }
+    yamlOutputEl.textContent = yamlStr;
+    // Optionally, add a download button
+    let dlBtn = document.getElementById('yaml-download-btn');
+    if (!dlBtn) {
+        dlBtn = document.createElement('button');
+        dlBtn.id = 'yaml-download-btn';
+        dlBtn.className = 'btn btn-primary';
+        dlBtn.textContent = 'Download YAML Output';
+        dlBtn.style.marginLeft = '1em';
+        yamlOutputEl.parentNode.insertBefore(dlBtn, yamlOutputEl.nextSibling);
+        dlBtn.addEventListener('click', () => {
+            const blob = new Blob([yamlStr], { type: 'text/yaml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cluster_output_period_${periodCounter}.yaml`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        });
+    }
 }
 
 // --- 2. UI RENDERING & CHART FUNCTIONS ---
@@ -623,4 +716,3 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderClusterState();
     renderTeamDashboards();
 });
-

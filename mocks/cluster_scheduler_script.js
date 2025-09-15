@@ -273,6 +273,28 @@ function initializeFromURL() {
     const clusterId = params.get('clusterId');
     const configParam = params.get('config');
     const demandParam = params.get('demand');
+    const yamlParam = params.get('yaml');
+
+    if (yamlParam) {
+        // --- YAML input mode ---
+        try {
+            const yamlStr = decodeURIComponent(escape(window.atob(yamlParam)));
+            const parsed = jsyaml.load(yamlStr);
+            clusterIdDisplay.textContent = 'YAML Input';
+            manualControls.style.display = 'none';
+            // For demo: show a summary of clusters and jobs
+            let summary = '<div class="p-4 bg-gray-100 rounded mb-4"><b>YAML Input Parsed:</b><br><pre style="font-size:0.95em;max-height:300px;overflow:auto;">' + yamlStr.replace(/</g,'&lt;') + '</pre></div>';
+            document.body.insertAdjacentHTML('afterbegin', summary);
+            // You can now use 'parsed' for further logic, e.g., visualizeAllocation, etc.
+        } catch (e) {
+            clusterIdDisplay.textContent = 'YAML Error';
+            document.body.insertAdjacentHTML('afterbegin', `<div class='p-4 bg-red-100 rounded mb-4'>YAML Parse Error: ${e}</div>`);
+        }
+        resizeCanvas();
+        updateUIData();
+        drawDashboard();
+        return;
+    }
 
     if (clusterId && configParam && demandParam) {
         clusterIdDisplay.textContent = clusterId;
