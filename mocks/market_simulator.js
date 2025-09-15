@@ -156,6 +156,7 @@ function runMarketClearingPeriod() {
         machineState[clusterId].forEach(machine => {
             // Filter out completed jobs (jobs whose completion period is in the past)
             machine.jobs = machine.jobs.filter(job => job.completionPeriod > periodCounter);
+            console.log('Completion period: ', machine.jobs[0]?.completionPeriod, ' Current period: ', periodCounter);
             // Recalculate available GPUs based on remaining jobs
             const gpusInUse = machine.jobs.reduce((acc, job) => acc + job.gpus, 0);
             machine.availableGpus = 8 - gpusInUse;
@@ -554,7 +555,45 @@ addFloatingBtn.addEventListener('click', () => {
     }
 });
 
+
 runAlgorithmBtn.addEventListener('click', runMarketClearingPeriod);
+
+// --- PERIODIC TICK FOR MARKET CLEARING ---
+let clearingIntervalId = null;
+const TICK_PERIOD_MS = 3000; // 3 seconds per period (adjust as needed)
+
+// Add a button to start/stop the periodic clearing
+let autoTickBtn = document.getElementById('auto-tick-btn');
+if (!autoTickBtn) {
+    autoTickBtn = document.createElement('button');
+    autoTickBtn.id = 'auto-tick-btn';
+    autoTickBtn.textContent = '▶️ Auto Market Tick';
+    autoTickBtn.style.marginLeft = '1em';
+    runAlgorithmBtn.parentNode.insertBefore(autoTickBtn, runAlgorithmBtn.nextSibling);
+}
+
+function startMarketAutoTick() {
+    if (!clearingIntervalId) {
+        clearingIntervalId = setInterval(runMarketClearingPeriod, TICK_PERIOD_MS);
+        autoTickBtn.textContent = '⏸️ Pause Auto Tick';
+    }
+}
+
+function stopMarketAutoTick() {
+    if (clearingIntervalId) {
+        clearInterval(clearingIntervalId);
+        clearingIntervalId = null;
+        autoTickBtn.textContent = '▶️ Auto Market Tick';
+    }
+}
+
+autoTickBtn.addEventListener('click', () => {
+    if (clearingIntervalId) {
+        stopMarketAutoTick();
+    } else {
+        startMarketAutoTick();
+    }
+});
 
 // --- 4. INITIAL RENDER ---
 window.addEventListener('DOMContentLoaded', async () => {
