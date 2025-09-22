@@ -1,0 +1,70 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    color: white;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: #4f46e5;
+    box-shadow: 0 4px 14px 0 rgb(0 0 0 / 10%);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #4338ca;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px 0 rgb(0 0 0 / 12%);
+}
+
+.btn-secondary {
+    background-color: #10b981;
+     box-shadow: 0 4px 14px 0 rgb(0 0 0 / 8%);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px 0 rgb(0 0 0 / 10%);
+}
+
+/* New styles for highlighting interactive elements */
+.interactive-box {
+    border-color: #d1d5db;
+    background-color: #f9fafb;
+}
+
+.input-highlight {
+    transition: all 0.2s ease-in-out;
+    border: 1px solid #d1d5db;
+}
+
+.input-highlight:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+}
+

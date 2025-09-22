@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Gateway Market Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="market_simulator.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">LLM Gateway Market Simulator</h1>
+            <p class="text-lg text-gray-600 mt-2">Simulating a multi-team economy for shared AI model access via Portkey.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LEFT COLUMN: CONTROLS & INPUTS -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Portkey API Key Input Box -->
+                <div class="card interactive-box">
+                    <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. Connect to Portkey</h2>
+                    <div class="flex flex-col gap-3">
+                        <label for="portkey-api-key" class="font-medium text-gray-700">Portkey API Key</label>
+                        <input type="password" id="portkey-api-key" placeholder="Enter your Portkey API Key" class="w-full p-2 border rounded-md input-highlight">
+                        <button id="fetch-models-btn" class="btn btn-primary w-full flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M15.55 13.422a1 1 0 010 1.156l-3 3a1 1 0 01-1.414-1.414l1.828-1.828-1.828-1.828a1 1 0 011.414-1.414l3 3zM4.45 6.578a1 1 0 010-1.156l3-3a1 1 0 111.414 1.414L7.036 5.666l1.828 1.828a1 1 0 11-1.414 1.414l-3-3z" clip-rule="evenodd" /><path fill-rule="evenodd" d="M10.828 4.172a1 1 0 011.414 0l4.5 4.5a1 1 0 010 1.414l-4.5 4.5a1 1 0 01-1.414-1.414L14.586 10l-3.758-3.758a1 1 0 010-1.414zM4.172 10.828a1 1 0 010-1.414L7.93 5.656a1 1 0 011.414 1.414L5.586 10l3.758 3.758a1 1 0 01-1.414 1.414l-3.758-4.5z" clip-rule="evenodd" /></svg>
+                            Fetch Live Models
+                        </button>
+                    </div>
+                    <p id="api-status" class="text-sm text-gray-500 mt-3">Enter your API key to load live model data from Portkey.</p>
+                </div>
+
+                <!-- Add Demand Box -->
+                <div class="card interactive-box">
+                    <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Add Team Demand</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="team-selector" class="font-medium text-gray-700 block mb-1">Submitting Team</label>
+                            <select id="team-selector" class="w-full p-2 border rounded-md bg-gray-50 input-highlight"></select>
+                        </div>
+                        <div>
+                            <label for="llm-model-selector" class="font-medium text-gray-700 block mb-1">LLM Model</label>
+                            <select id="llm-model-selector" class="w-full p-2 border rounded-md bg-gray-50 input-highlight" disabled>
+                                <option>Fetch models first...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="request-quantity" class="font-medium text-gray-700 block mb-1">Number of Requests</label>
+                            <input type="number" id="request-quantity" placeholder="Number of Requests" class="w-full p-2 border rounded-md input-highlight" min="1" value="100">
+                        </div>
+                        <button id="add-demand-btn" class="btn btn-secondary w-full flex items-center justify-center gap-2" disabled>
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                            Add Demand Request
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Demand Queue Box -->
+                <div class="card">
+                     <h3 class="text-xl font-semibold mb-2">Demand Queue</h3>
+                     <div id="demand-queue-display" class="space-y-2 text-sm max-h-60 overflow-y-auto">
+                        <p class="text-gray-500">No requests added yet.</p>
+                     </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: DASHBOARD & OUTPUTS -->
+            <div class="lg:col-span-2 space-y-6">
+                 <!-- Main Controls Box -->
+                <div class="card">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="text-center md:text-left">
+                            <h2 class="text-2xl font-bold text-indigo-600">Period: <span id="period-counter">0</span></h2>
+                            <p class="text-gray-500">Run the algorithm to clear the market for the next period.</p>
+                        </div>
+                        <button id="run-algorithm-btn" class="btn btn-primary w-full md:w-auto shadow-lg flex items-center justify-center gap-2" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Run Market Clearing Period
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Team Dashboards Box -->
+                <div class="card">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Team Overviews</h2>
+                    <div id="team-dashboards-display" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Team summary links will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Live Costs Box -->
+                <div class="card">
+                     <h3 class="text-xl font-semibold mb-4">Live LLM Model Costs (from Portkey)</h3>
+                     <div id="llm-costs-display" class="grid md:grid-cols-3 gap-4">
+                        <p class="text-gray-500 col-span-3">Waiting for live data from Portkey...</p>
+                     </div>
+                </div>
+
+                <!-- Price & Allocation Box -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">Price List (Credits / 1k Tokens)</h3>
+                        <div id="price-list-display" class="space-y-2">
+                           <p class="text-gray-500">Run algorithm to generate prices.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">Allocation Plan</h3>
+                        <div id="allocation-plan-display" class="space-y-4 max-h-60 overflow-y-auto">
+                            <p class="text-gray-500">Run algorithm to generate plan.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Trends Box -->
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4">LLM Cost Trends (Credits / 1k Tokens)</h3>
+                    <div id="price-charts-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Charts will be injected here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="market_simulator.js"></script>
+</body>
+</html>
+
