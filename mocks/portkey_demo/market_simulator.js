@@ -101,6 +101,7 @@ async function fetchLLMCostsFromPortkey() {
         data.data.forEach(model => {
             // Portkey gives cost per 1M tokens, we want per 1k
             if (!model.slug.includes('gemini')) return; // Demo focus on Gemini models
+            if (model.slug.includes('preview')) return; // Skip preview models
             console.info('Processing model:', model.id, model.slug);
             inputCost1k = 0.0001;
             outputCost1k = 0.00005;
@@ -108,12 +109,12 @@ async function fetchLLMCostsFromPortkey() {
                 inputCost1k = 0.01;
                 outputCost1k = 0.005;
                 pro_count += 1;
-                if (pro_count > 5) return;
+                if (pro_count > 3) return;
             } else if (model.slug.includes('lite')) {
                 inputCost1k = 0.003;
                 outputCost1k = 0.0015;
                 lite_count += 1;
-                if (lite_count > 5) return;
+                if (lite_count > 3) return;
             } else {
                 other_count += 1;
                 if (other_count > 3) return;
