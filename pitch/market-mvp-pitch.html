@@ -1,230 +1,156 @@
-<!doctype html>
+<!-- index.html -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BidSpot — MVP Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- Google Fonts (only for demo, optional in corp builds) -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BidSpot MVP Demo</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <aside class="sidebar">
-      <div class="brand">
-  <img src="../assets/BidSpot.Ai-min.png" alt="BidSpot Logo" class="logo-img">
-  <div>
-    <div class="title">BidSpot</div>
-    <div class="subtitle">GPU Marketplace (MVP)</div>
-  </div>
-</div>
-
-      <nav class="nav">
-        <button class="nav-btn active" data-tab="market">Market</button>
-        <button class="nav-btn" data-tab="jobs">Jobs</button>
-        <button class="nav-btn" data-tab="teams">Teams</button>
-        <button class="nav-btn" data-tab="reports">Reports</button>
-      </nav>
-
-      <div class="footer-note">
-        <small>Auction cadence: <strong>5 min</strong></small>
-        <small class="muted">Demo: simulated live market</small>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div class="search">
-          <input id="search" placeholder="Search teams, jobs..." />
+    <header>
+        <div class="logo">BidSpot.AI</div>
+        <nav>
+            <ul>
+                <li><a href="#dashboard" onclick="showSection('dashboard')">Dashboard</a></li>
+                <li><a href="#marketplace" onclick="showSection('marketplace')">Marketplace</a></li>
+                <li><a href="#place-bid" onclick="showSection('place-bid')">Place Bid/Request</a></li>
+                <li><a href="#reports" onclick="showSection('reports')">Reports</a></li>
+                <li><a href="#settings" onclick="showSection('settings')">Settings</a></li>
+            </ul>
+        </nav>
+        <div class="role-selector">
+            <label for="role">Select Role:</label>
+            <select id="role" onchange="updateRole()">
+                <option value="cfo">CFO / Resource Planner</option>
+                <option value="team-lead">ML Team Lead</option>
+                <option value="engineer">ML Application Engineer</option>
+                <option value="developer">ML Developer</option>
+            </select>
         </div>
-        <div class="top-actions">
-          <button id="newJobBtn" class="primary">New Job</button>
-          <div class="user-pill">Demo · CFO</div>
-        </div>
-      </header>
-
-      <section class="content">
-        <!-- Market view -->
-        <div id="market" class="panel active-panel">
-          <div class="row">
-            <div class="card market-card">
-              <div class="card-head">
-                <div>
-                  <h3>Live Auction</h3>
-                  <p class="muted">Next clearing in <span id="countdown">05:00</span></p>
-                </div>
-                <div class="price-box">
-                  <div class="price-label">Clearing Price</div>
-                  <div id="clearingPrice" class="price-value">$0.00</div>
-                </div>
-              </div>
-
-              <div class="auction-graph" id="auctionGraph">
-                <!-- small sparkline canvas -->
-                <canvas id="sparkline" width="700" height="120"></canvas>
-                <div class="ticker">
-                  <div><strong id="spotPrice">$0.00</strong> spot</div>
-                  <div class="muted">Utilization: <strong id="util">0%</strong></div>
-                </div>
-              </div>
-
-              <div class="auction-controls">
-                <div class="legend">
-                  <span class="chip">Uniform-price auction</span>
-                  <span class="chip muted">Min unit: 1 min</span>
-                </div>
-                <div class="action-row">
-                  <button id="runNow" class="secondary">Run Auction Now</button>
-                  <div class="muted small">Or wait for next cadence</div>
-                </div>
-              </div>
+    </header>
+    <main>
+        <section id="dashboard" class="active">
+            <h2>Dashboard</h2>
+            <p>Welcome to BidSpot - The Nasdaq for GPUs. This demo simulates real-time GPU marketplace dynamics.</p>
+            <div class="price-ticker">
+                <h3>Current Spot Prices</h3>
+                <p>GPU Type: A100 - Spot Price: $<span id="spot-price-a100">0.50</span>/hour</p>
+                <p>GPU Type: H100 - Spot Price: $<span id="spot-price-h100">1.20</span>/hour</p>
+                <p>GPU Type: V100 - Spot Price: $<span id="spot-price-v100">0.30</span>/hour</p>
             </div>
-
-            <div class="card side-card">
-              <h4>Top Bidders</h4>
-              <ul id="topBidders" class="list-compact"></ul>
-              <hr />
-              <h4>Resource Snapshot</h4>
-              <div class="metric">
-                <div class="metric-label">Total GPUs</div>
-                <div class="metric-value">128</div>
-              </div>
-              <div class="metric">
-                <div class="metric-label">Allocated</div>
-                <div id="allocated" class="metric-value">0</div>
-              </div>
-              <div class="metric">
-                <div class="metric-label">Free</div>
-                <div id="free" class="metric-value">128</div>
-              </div>
+            <div class="quick-stats">
+                <h3>Quick Stats</h3>
+                <ul>
+                    <li>Total GPUs Available: 500</li>
+                    <li>Utilization: 75%</li>
+                    <li>Cost Savings This Month: $12,500</li>
+                </ul>
             </div>
-          </div>
-
-          <div class="row small">
-            <div class="card">
-              <h4>Recent Auctions</h4>
-              <table class="table">
-                <thead><tr><th>Time</th><th>Clearing $</th><th>Allocated GPUs</th><th>Top Bidder</th></tr></thead>
-                <tbody id="auctionHistory"></tbody>
-              </table>
-            </div>
-
-            <div class="card">
-              <h4>Job Queue</h4>
-              <ul id="jobQueue" class="job-list"></ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- Jobs view -->
-        <div id="jobs" class="panel">
-          <div class="row">
-            <div class="card full">
-              <div class="card-head">
-                <h3>Jobs</h3>
-                <div class="muted">Submit jobs with bids, constraints, and deadlines</div>
-              </div>
-              <div>
-                <table class="table">
-                  <thead><tr><th>Job</th><th>Team</th><th>GPU</th><th>Bid</th><th>ETA</th><th>Status</th></tr></thead>
-                  <tbody id="jobsTable"></tbody>
+        </section>
+        <section id="marketplace">
+            <h2>Marketplace</h2>
+            <p>Live order book mimicking a trading exchange. Prices fluctuate based on simulated demand/supply.</p>
+            <div class="order-book">
+                <h3>Order Book - A100 GPUs</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Bid Price ($/hour)</th>
+                            <th>Quantity (GPUs)</th>
+                            <th>Ask Price ($/hour)</th>
+                            <th>Quantity (GPUs)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-book-body">
+                        <!-- Populated by JS -->
+                    </tbody>
                 </table>
-              </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Teams view -->
-        <div id="teams" class="panel">
-          <div class="row">
-            <div class="card">
-              <h3>Teams & Credits</h3>
-              <div id="teamsGrid" class="teams-grid"></div>
+        </section>
+        <section id="place-bid">
+            <h2>Place Bid / Request Credits</h2>
+            <p>Submit your workload requirements. Auto-recommendations provided by simulated AI.</p>
+            <form id="bid-form">
+                <label for="workload-type">Workload Type:</label>
+                <select id="workload-type">
+                    <option value="training">Training</option>
+                    <option value="inference">Inference</option>
+                    <option value="development">Development</option>
+                </select>
+                <label for="gpu-type">GPU Type:</label>
+                <select id="gpu-type">
+                    <option value="a100">A100</option>
+                    <option value="h100">H100</option>
+                    <option value="v100">V100</option>
+                </select>
+                <label for="quantity">Quantity (GPUs):</label>
+                <input type="number" id="quantity" min="1" value="1">
+                <label for="duration">Duration (hours):</label>
+                <input type="number" id="duration" min="1" value="1">
+                <label for="priority">Priority:</label>
+                <select id="priority">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+                <label for="latency">Max Latency (ms):</label>
+                <input type="number" id="latency" value="100">
+                <label for="task-desc">Task Description:</label>
+                <textarea id="task-desc" placeholder="e.g., Train model on dataset X"></textarea>
+                <button type="button" onclick="placeBid()">Submit Bid</button>
+            </form>
+            <div id="auto-recommendation" class="recommendation"></div>
+            <div id="bid-history">
+                <h3>Your Recent Bids</h3>
+                <ul id="bid-list"></ul>
             </div>
-
-            <div class="card">
-              <h3>Finance Snapshot</h3>
-              <div class="metric">
-                <div class="metric-label">Total Credits</div>
-                <div id="totalCredits" class="metric-value">$0</div>
-              </div>
-              <div class="metric">
-                <div class="metric-label">Burn rate /hr</div>
-                <div id="burnRate" class="metric-value">$0/hr</div>
-              </div>
+        </section>
+        <section id="reports">
+            <h2>Reports</h2>
+            <p>Rich insights into usage, efficiency, and cost savings.</p>
+            <div class="report-section">
+                <h3>Efficiency Report</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Utilization (%)</th>
+                            <th>Cost ($)</th>
+                            <th>Savings ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>ML Team A</td><td>85</td><td>5000</td><td>1200</td></tr>
+                        <tr><td>Research Team</td><td>70</td><td>3000</td><td>800</td></tr>
+                        <!-- More rows -->
+                    </tbody>
+                </table>
             </div>
-          </div>
-        </div>
-
-        <!-- Reports view -->
-        <div id="reports" class="panel">
-          <div class="row">
-            <div class="card full">
-              <h3>Reports</h3>
-              <p class="muted">Efficiency / Utilization / Cost savings (demo)</p>
-              <div class="report-grid">
-                <div class="stat-card">
-                  <div class="stat-title">Efficiency</div>
-                  <div id="efficiency" class="stat-value">0%</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-title">Avg. Wait Time</div>
-                  <div id="avgWait" class="stat-value">0m</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-title">Estimated Monthly Savings</div>
-                  <div id="savings" class="stat-value">$0</div>
-                </div>
-              </div>
+            <div class="report-section">
+                <h3>Usage Trends</h3>
+                <div id="usage-chart" class="chart-placeholder">Simulated Chart: Line graph showing usage over time.</div>
             </div>
-          </div>
-        </div>
-
-      </section>
+        </section>
+        <section id="settings">
+            <h2>Settings (For Resource Planner)</h2>
+            <p>Adjust team weights and priorities.</p>
+            <form id="settings-form">
+                <label for="team">Team:</label>
+                <select id="team">
+                    <option value="ml-a">ML Team A</option>
+                    <option value="research">Research Team</option>
+                </select>
+                <label for="weight">Business Priority Weight (1-10):</label>
+                <input type="number" id="weight" min="1" max="10" value="5">
+                <button type="button" onclick="updateSettings()">Update</button>
+            </form>
+            <div id="settings-feedback"></div>
+        </section>
     </main>
-  </div>
-
-  <!-- New Job Modal -->
-  <div id="modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-panel">
-      <header>
-        <h3>Submit Job</h3>
-        <button id="closeModal" class="close">&times;</button>
-      </header>
-      <form id="jobForm">
-        <label>Job name
-          <input name="name" required />
-        </label>
-
-        <label>Team
-          <select name="team"></select>
-        </label>
-
-        <label>GPUs required
-          <input name="gpus" type="number" min="1" max="64" value="1" required />
-        </label>
-
-        <label>Bid (credits / minute)
-          <input name="bid" type="number" min="0.01" step="0.01" value="0.50" required />
-        </label>
-
-        <label>Max run (minutes)
-          <input name="duration" type="number" min="1" value="60" required />
-        </label>
-
-        <label>Deadline (hours)
-          <input name="deadline" type="number" min="1" value="24" required />
-        </label>
-
-        <div class="modal-actions">
-          <button type="submit" class="primary">Submit job</button>
-          <button type="button" id="cancelModal" class="secondary">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+    <footer>
+        <p>&copy; 2025 BidSpot.AI - MVP Demo for Investors. All rights reserved.</p>
+    </footer>
+    <script src="script.js"></script>
 </body>
 </html>
-
